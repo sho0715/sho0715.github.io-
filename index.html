@@ -17,7 +17,7 @@
 </main>
 <script>
 const $=id=>document.getElementById(id),canvas=$('c'),ctx=canvas.getContext('2d',{willReadFrequently:true});
-let items=[],active=-1,shown=new Set(),tileSize=2800,ready=false;let cards=[],order=[],pos=0,answerShown=false,knownSet=new Set(),reviewSet=new Set();
+let items=[],active=-1,shown=new Set(),tileSize=5600,ready=false;let cards=[],order=[],pos=0,answerShown=false,knownSet=new Set(),reviewSet=new Set();
 const status=t=>$('status').textContent=t;
 function setMode(mode){const photo=mode==='photo';$('photoTab').classList.toggle('active',photo);$('quizTab').classList.toggle('active',!photo);$('photoControls').classList.toggle('hidden',!photo);$('photoStudy').classList.toggle('hidden',!photo);$('quizSetup').classList.toggle('hidden',photo);$('quizStudy').classList.toggle('hidden',photo);}
 $('photoTab').onclick=()=>setMode('photo');$('quizTab').onclick=()=>setMode('quiz');
