@@ -17,7 +17,7 @@
 </main>
 <script>
 const $=id=>document.getElementById(id),canvas=$('c'),ctx=canvas.getContext('2d',{willReadFrequently:true});
-let items=[],active=-1,shown=new Set(),tileWidth=168,tileHeight=39,ready=false;let cards=[],order=[],pos=0,answerShown=false,knownSet=new Set(),reviewSet=new Set();
+let items=[],active=-1,shown=new Set(),tileSize=5600,ready=false;let cards=[],order=[],pos=0,answerShown=false,knownSet=new Set(),reviewSet=new Set();
 const status=t=>$('status').textContent=t;
 function setMode(mode){const photo=mode==='photo';$('photoTab').classList.toggle('active',photo);$('quizTab').classList.toggle('active',!photo);$('photoControls').classList.toggle('hidden',!photo);$('photoStudy').classList.toggle('hidden',!photo);$('quizSetup').classList.toggle('hidden',photo);$('quizStudy').classList.toggle('hidden',photo);}
 $('photoTab').onclick=()=>setMode('photo');$('quizTab').onclick=()=>setMode('quiz');
@@ -30,9 +30,9 @@ function processImage(img){
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(!mask[i])continue;let rr=0,gg=0,bb=0,n=0;for(let dy=-radius;dy<=radius;dy+=2)for(let dx=-radius;dx<=radius;dx+=2){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=w||yy>=h)continue;const j=yy*w+xx;if(mask[j])continue;const p=j*4;rr+=data[p];gg+=data[p+1];bb+=data[p+2];n++;}if(n){const p=i*4;hd[p]=rr/n;hd[p+1]=gg/n;hd[p+2]=bb/n;}}
  // Deliberately do NOT merge nearby red areas: each small tile is revealed independently,
  // avoiding the previous bug where one tap exposed several neighboring answers.
- const cols=Math.ceil(w/tileWidth),rows=Math.ceil(h/tileHeight),has=new Uint8Array(cols*rows);
- for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(mask[y*w+x])has[Math.floor(y/tileHeight)*cols+Math.floor(x/tileWidth)]=1;
- const regions=[];for(let ty=0;ty<rows;ty++)for(let tx=0;tx<cols;tx++)if(has[ty*cols+tx])regions.push({x:tx*tileWidth,y:ty*tileHeight,w:Math.min(tileWidth,w-tx*tileWidth),h:Math.min(tileHeight,h-ty*tileHeight)});
+ const cols=Math.ceil(w/tileSize),rows=Math.ceil(h/tileSize),has=new Uint8Array(cols*rows);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(mask[y*w+x])has[Math.floor(y/tileSize)*cols+Math.floor(x/tileSize)]=1;
+ const regions=[];for(let ty=0;ty<rows;ty++)for(let tx=0;tx<cols;tx++)if(has[ty*cols+tx])regions.push({x:tx*tileSize,y:ty*tileSize,w:Math.min(tileSize,w-tx*tileSize),h:Math.min(tileSize,h-ty*tileSize)});
  const hiddenCanvas=document.createElement('canvas');hiddenCanvas.width=w;hiddenCanvas.height=h;hiddenCanvas.getContext('2d').putImageData(hidden,0,0);return{w,h,originalCanvas:src,hiddenCanvas,regions,name:''};
 }
 function render(){if(active<0||!items[active])return;const it=items[active];canvas.width=it.w;canvas.height=it.h;ctx.clearRect(0,0,it.w,it.h);ctx.drawImage(it.hiddenCanvas,0,0);for(const i of shown){const r=it.regions[i];ctx.drawImage(it.originalCanvas,r.x,r.y,r.w,r.h,r.x,r.y,r.w,r.h);}}
