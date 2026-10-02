@@ -5,54 +5,302 @@
 <title>赤シート暗記＋問題モード</title>
 <style>
 :root{--red:#c83b3b;--ink:#252525;--muted:#737373;--line:#e6e2dc;--paper:#f8f7f4}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif}header{padding:16px;background:#fff;border-bottom:1px solid var(--line)}h1{font-size:20px;margin:0;font-weight:750}.subtitle{font-size:12px;color:var(--muted);margin-top:5px}main{max-width:900px;margin:auto;padding:12px;display:grid;gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}h2{font-size:15px;margin:0 0 10px}.tabs,.controls,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,.filelabel,select,textarea,input[type=text]{font:inherit;font-size:14px;border:1px solid #e4e0da;border-radius:11px;background:#f5f3ef;padding:10px 12px;color:var(--ink)}button{font-weight:650}button.primary,.tab.active{background:var(--red);border-color:var(--red);color:white}button:disabled{opacity:.45}.tab{flex:1}.filelabel{display:inline-block;font-weight:650;cursor:pointer}input[type=file]{display:none}#pages{display:flex;gap:6px;overflow-x:auto;padding:8px 0}.pagebtn{white-space:nowrap;flex:0 0 auto}.pagebtn.active{background:#292929;color:#fff;border-color:#292929}#status{font-size:13px;color:#5d5d5d;line-height:1.5;margin-top:9px}#canvasWrap{background:#e9e6e0;border-radius:10px;overflow:auto;max-height:70vh;display:flex;justify-content:center;align-items:flex-start}canvas{display:block;width:100%;height:auto;touch-action:manipulation}.hint,.small{font-size:12px;color:var(--muted);line-height:1.55}.hint{margin:9px 0 0}.small{font-size:11px}progress{width:100%;height:6px;margin-top:9px;accent-color:var(--red)}textarea{width:100%;min-height:180px;resize:vertical;line-height:1.5;background:#fff}.quizbox{min-height:190px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:14px;padding:18px}.qtext{font-size:22px;font-weight:750;white-space:pre-wrap;overflow-wrap:anywhere}.atext{font-size:18px;white-space:pre-wrap;overflow-wrap:anywhere}.counter{font-size:12px;color:var(--muted)}.hidden{display:none!important}.notice{background:#fff8e8;border:1px solid #f0dfb7;border-radius:10px;padding:10px;font-size:12px;line-height:1.5}@media(min-width:760px){main{grid-template-columns:300px 1fr}.study{grid-column:2;grid-row:1 / span 3}.quizwide{grid-column:1 / -1}}
+
+/* usability additions */
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.stat{background:#f7f5f1;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px}.offlineBadge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700;background:#eef7ee;color:#2f6d35;margin-left:6px}.offlineBadge.off{background:#fff4e8;color:#9a5d1a}.quizbox{cursor:pointer}.backupActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.draftSaved{font-size:11px;color:var(--muted);margin-top:7px}.manualActive{background:#fff0f0!important;border-color:#c83b3b!important;color:#a72f2f!important}
+/* 写真モードの学習画面を画面いっぱいに表示 */
+#photoStudy.fullscreenStudy{position:fixed;inset:0;z-index:9999;width:100%;height:100vh;height:100dvh;max-width:none;margin:0;padding:10px;border:0;border-radius:0;display:flex;flex-direction:column;gap:8px;background:var(--paper);overflow:hidden}
+#photoStudy.fullscreenStudy h2{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;flex:0 0 auto}
+#photoStudy.fullscreenStudy #canvasWrap{flex:1 1 auto;min-height:0;max-height:none;width:100%;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:auto}
+#photoStudy.fullscreenStudy canvas{width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain}
+#photoStudy.fullscreenStudy .hint{display:none}
+#exitFullscreen{display:none}
+#photoStudy.fullscreenStudy #exitFullscreen{display:inline-block;white-space:nowrap}
+@media(min-width:760px){#photoStudy.fullscreenStudy{grid-column:auto;grid-row:auto}}
 </style></head><body>
-<header><h1>🔴 赤シート暗記</h1><div class="subtitle">写真暗記と、シャッフル問題の2モード</div></header>
+<header><h1>🔴 赤シート暗記</h1><div class="subtitle">写真暗記と暗記カード｜AIなし・OCRは初回Wi-Fi準備＋高精度認識 <span id="netBadge" class="offlineBadge">確認中</span></div></header>
 <main>
 <section class="card"><div class="tabs"><button id="photoTab" class="tab active">写真モード</button><button id="quizTab" class="tab">問題モード</button></div></section>
-<section id="photoControls" class="card"><h2>① 写真を読み込む</h2><label class="filelabel" for="picker">写真を選ぶ（複数選択可）</label><input id="picker" type="file" accept="image/*" multiple><div class="small" style="margin-top:8px">6枚の制限はありません。写真はこの端末のブラウザ内で処理し、サーバーには送信しません。大量に選ぶと処理に時間がかかる場合があります。</div><div id="pages"></div><div id="status" aria-live="polite">写真を選ぶと暗記を始められます。</div><progress id="progress" value="0" max="100" hidden></progress><div class="actions" style="margin-top:10px"><button id="hideAll" class="primary" disabled>全部隠す</button><button id="showAll" disabled>全部表示</button><button id="reset" disabled>最初から</button></div><p class="hint">赤文字をほどよい大きさの範囲ごとに隠します。タップした範囲が表示されます。答えが長い場合は複数回タップしてね。</p></section>
-<section class="card study" id="photoStudy"><h2>② 暗記する</h2><div id="canvasWrap"><canvas id="c"></canvas></div><p class="hint">赤色の判定は自動です。赤い図・線も対象になることがあります。</p></section>
-<section id="quizSetup" class="card quizwide hidden"><h2>問題モード：問題と答えを登録</h2><p class="hint">1行に1問ずつ「問題 | 答え」の形式で入力。英語イディオム、歴史、理科など好きな科目を登録できます。</p><textarea id="cardsInput" spellcheck="false" placeholder="break the ice | 緊張をほぐす\nOnce in a blue moon | めったに〜ない\n明治維新が始まった年 | 1868年"></textarea><div class="controls" style="margin-top:10px"><button id="sample">サンプルを入れる</button><button id="saveCards" class="primary">問題を保存して開始</button><button id="clearCards">全消去</button></div><p class="hint">この端末のブラウザに保存します。問題文・答えに「 | 」を含めないでね。</p>
-<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px"><h2>写真から問題を取り込む（OCR）</h2><p class="hint">写真を拡大・明暗補正して文字を読み取ります。OCRは誤認識することがあり、問題と答えの区切りも自動判定できないため、結果を確認・修正してね。</p><label class="filelabel" for="ocrPicker">写真から文字を読み取る</label><input id="ocrPicker" type="file" accept="image/*" multiple><div id="ocrStatus" class="small" aria-live="polite" style="margin-top:8px">英語・日本語に対応。読み取りには通信が必要な場合があります。</div><progress id="ocrProgress" value="0" max="100" hidden></progress></div></section>
-<section id="quizStudy" class="card quizwide hidden"><div class="controls" style="justify-content:space-between"><h2 style="margin:0">シャッフル出題</h2><span id="quizCount" class="counter">0問</span></div><div class="quizbox"><div id="qtext" class="qtext">問題を登録してね</div><div id="atext" class="atext hidden"></div></div><div class="actions"><button id="reveal" class="primary" disabled>答えを見る</button><button id="nextQ" disabled>次の問題 ↻</button><button id="reshuffle" disabled>順番をシャッフル</button><button id="reviewOnly" disabled>復習だけ出題</button><button id="allQuestions" disabled>全問題に戻る</button></div><div class="controls" style="margin-top:10px"><button id="known" disabled>覚えた ✓</button><button id="review" disabled>もう一度 □</button><span id="quizStatus" class="small"></span></div></section>
+<section id="photoControls" class="card"><h2>① 写真を読み込む</h2><label class="filelabel" for="picker">写真を選ぶ（複数選択可）</label><input id="picker" type="file" accept="image/*" multiple><div class="small" style="margin-top:8px">6枚の制限はありません。写真はこの端末のブラウザ内で処理し、サーバーには送信しません。大量に選ぶと処理に時間がかかる場合があります。</div><div id="pages"></div><div id="status" aria-live="polite">写真は端末内で処理します。外部への送信はありません。</div><progress id="progress" value="0" max="100" hidden></progress><div class="actions" style="margin-top:10px"><button id="hideAll" class="primary" disabled>全部隠す</button><button id="showAll" disabled>全部表示</button><button id="manualMask" disabled>✍️ 手動で隠す</button><button id="reset" disabled>最初から</button></div><p class="hint">赤文字は文章のまとまりを自動判定して隠します。うまく判定されない場所は「手動で隠す」に切り替えて指でなぞれます。</p></section>
+<section class="card study" id="photoStudy"><h2><span>② 暗記する</span><span><button id="enterFullscreen" type="button">⛶ 全画面</button><button id="exitFullscreen" type="button">縮小して戻る</button></span></h2><div id="canvasWrap"><canvas id="c"></canvas></div><p class="hint">赤色の判定は自動です。赤い図・線も対象になることがあります。</p></section>
+<section id="quizSetup" class="card quizwide hidden"><h2>問題モード：問題と答えを登録</h2><p class="hint">1行に1問ずつ「問題 | 答え」の形式で入力。入力途中も自動保存されるので、ページを閉じても途中から続けられます。</p><textarea id="cardsInput" spellcheck="false" placeholder="break the ice | 緊張をほぐす\nOnce in a blue moon | めったに〜ない\n明治維新が始まった年 | 1868年"></textarea><div class="draftSaved" id="draftSaved">入力内容は端末内に保存されます。</div><div class="controls" style="margin-top:10px"><button id="sample">サンプルを入れる</button><button id="saveCards" class="primary">問題を保存して開始</button><button id="clearCards">全消去</button></div><div class="backupActions"><button id="exportCards">💾 バックアップを書き出す</button><label class="filelabel" for="importCards">📂 バックアップを読み込む</label><input id="importCards" type="file" accept="application/json,.json" hidden><button id="resetProgress">学習状況だけリセット</button></div><div class="stats" id="stats"><span class="stat">全問題 <b id="statTotal">0</b></span><span class="stat">覚えた <b id="statKnown">0</b></span><span class="stat">復習 <b id="statReview">0</b></span></div><p class="hint">カードと学習状況はこの端末のブラウザに保存します。復習・出題は通信不要です。</p>
+<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px"><h2>写真から文字を読み取る（高精度OCR）</h2><p class="hint">初回はWi-Fi接続中に「OCRを準備」を押してください。日本語・英語の認識データを読み込みます。読み取り時は2段組みを自動判定し、前処理を変えて認識結果を比較します。読み取り結果は確認・修正してからカードに保存してください。</p><div class="controls"><label class="filelabel" for="ocrPicker">写真を選んで高精度OCR</label><input id="ocrPicker" type="file" accept="image/*" multiple><button id="prepareOCR" class="primary">OCRを準備</button></div><div id="ocrStatus" class="small" aria-live="polite" style="margin-top:8px">未準備：Wi-Fi接続中に準備してください。</div><progress id="ocrProgress" value="0" max="100" hidden></progress></div>
+<div class="notice" style="margin-top:14px">AI機能はありません。OCRは初回にWi-Fiで準備してください。高精度モードでは、2段組みの自動判定・画像のコントラスト調整・複数のページ分割設定を組み合わせています。OCR資産は外部CDNから一度読み込み、ブラウザのキャッシュを利用します。準備後は機内モードで必ず確認してください。</div></section>
+<section id="quizStudy" class="card quizwide hidden"><div class="controls" style="justify-content:space-between"><h2 style="margin:0">シャッフル出題</h2><span id="quizCount" class="counter">0問</span></div><div class="quizbox" id="quizBox"><div id="qtext" class="qtext">問題を登録してね</div><div id="atext" class="atext hidden"></div><div id="tapHint" class="small">問題をタップしても答えを表示できます</div></div><div class="actions"><button id="reveal" class="primary" disabled>答えを見る</button><button id="nextQ" disabled>次の問題 ↻</button><button id="reshuffle" disabled>順番をシャッフル</button><button id="reviewOnly" disabled>復習だけ出題</button><button id="allQuestions" disabled>全問題に戻る</button></div><div class="controls" style="margin-top:10px"><button id="known" disabled>覚えた ✓</button><button id="review" disabled>もう一度 □</button><span id="quizStatus" class="small"></span></div></section>
 </main>
 <script>
 const $=id=>document.getElementById(id),canvas=$('c'),ctx=canvas.getContext('2d',{willReadFrequently:true});
-let items=[],active=-1,shown=new Set(),tileWidth=112,tileHeight=39,ready=false;let cards=[],order=[],pos=0,answerShown=false,knownSet=new Set(),reviewSet=new Set(),reviewOnlyMode=false;
+let items=[],active=-1,shown=new Set(),ready=false,manualMaskMode=false,drawing=false;
+let cards=[],order=[],pos=0,answerShown=false,knownIds=new Set(),reviewIds=new Set(),reviewOnlyMode=false;
 const status=t=>$('status').textContent=t;
 function setMode(mode){const photo=mode==='photo';$('photoTab').classList.toggle('active',photo);$('quizTab').classList.toggle('active',!photo);$('photoControls').classList.toggle('hidden',!photo);$('photoStudy').classList.toggle('hidden',!photo);$('quizSetup').classList.toggle('hidden',photo);$('quizStudy').classList.toggle('hidden',photo);}
-$('photoTab').onclick=()=>setMode('photo');$('quizTab').onclick=()=>setMode('quiz');
+$('photoTab').onclick=()=>setMode('photo');$('quizTab').onclick=()=>{exitStudyFullscreen();setMode('quiz');};
+function enterStudyFullscreen(){if(active<0||!items[active]){status('先に写真を読み込んでください。');return;} $('photoStudy').classList.add('fullscreenStudy');document.body.style.overflow='hidden';$('enterFullscreen').setAttribute('aria-pressed','true');requestAnimationFrame(()=>render());}
+function exitStudyFullscreen(){$('photoStudy').classList.remove('fullscreenStudy');document.body.style.overflow='';$('enterFullscreen').setAttribute('aria-pressed','false');requestAnimationFrame(()=>render());}
+$('enterFullscreen').onclick=enterStudyFullscreen;$('exitFullscreen').onclick=exitStudyFullscreen;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('photoStudy').classList.contains('fullscreenStudy'))exitStudyFullscreen();});
 function redAt(r,g,b){return r>72&&r-g>20&&r-b>12&&r>g*1.10&&r>b*1.07;}
+function buildRegions(mask,w,h){
+  // 元のタップ範囲に戻す：画像を固定サイズのタイルに分け、
+  // 赤い画素を含むタイルを1つのタップ対象にする。
+  const tileWidth=112,tileHeight=39;
+  const cols=Math.ceil(w/tileWidth),rows=Math.ceil(h/tileHeight);
+  const regions=[];
+  for(let ty=0;ty<rows;ty++){
+    for(let tx=0;tx<cols;tx++){
+      let found=false;
+      const x0=tx*tileWidth,y0=ty*tileHeight;
+      const x1=Math.min(w,x0+tileWidth),y1=Math.min(h,y0+tileHeight);
+      for(let y=y0;y<y1&&!found;y++){
+        const row=y*w;
+        for(let x=x0;x<x1;x++)if(mask[row+x]){found=true;break;}
+      }
+      if(found)regions.push({x:x0,y:y0,w:x1-x0,h:y1-y0});
+    }
+  }
+  return regions;
+}
 function processImage(img){
- const maxW=1250,maxH=1800,scale=Math.min(1,maxW/img.naturalWidth,maxH/img.naturalHeight),w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
- const src=document.createElement('canvas');src.width=w;src.height=h;const sctx=src.getContext('2d',{willReadFrequently:true});sctx.drawImage(img,0,0,w,h);const original=sctx.getImageData(0,0,w,h),data=original.data,mask=new Uint8Array(w*h);
+ const maxW=1600,maxH=2400,scale=Math.min(1,maxW/img.naturalWidth,maxH/img.naturalHeight),w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
+ const src=document.createElement('canvas');src.width=w;src.height=h;const sctx=src.getContext('2d',{willReadFrequently:true});sctx.drawImage(img,0,0,w,h);const original=sctx.getImageData(0,0,w,h),data=original.data,mask=new Uint8Array(w*h),manual=new Uint8Array(w*h);
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const p=(y*w+x)*4;if(redAt(data[p],data[p+1],data[p+2]))mask[y*w+x]=1;}
  const hidden=new ImageData(new Uint8ClampedArray(data),w,h),hd=hidden.data,radius=5;
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(!mask[i])continue;let rr=0,gg=0,bb=0,n=0;for(let dy=-radius;dy<=radius;dy+=2)for(let dx=-radius;dx<=radius;dx+=2){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=w||yy>=h)continue;const j=yy*w+xx;if(mask[j])continue;const p=j*4;rr+=data[p];gg+=data[p+1];bb+=data[p+2];n++;}if(n){const p=i*4;hd[p]=rr/n;hd[p+1]=gg/n;hd[p+2]=bb/n;}}
- // Deliberately do NOT merge nearby red areas: each small tile is revealed independently,
- // avoiding the previous bug where one tap exposed several neighboring answers.
- const cols=Math.ceil(w/tileWidth),rows=Math.ceil(h/tileHeight),has=new Uint8Array(cols*rows);
- for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(mask[y*w+x])has[Math.floor(y/tileHeight)*cols+Math.floor(x/tileWidth)]=1;
- const regions=[];for(let ty=0;ty<rows;ty++)for(let tx=0;tx<cols;tx++)if(has[ty*cols+tx])regions.push({x:tx*tileWidth,y:ty*tileHeight,w:Math.min(tileWidth,w-tx*tileWidth),h:Math.min(tileHeight,h-ty*tileHeight)});
- const hiddenCanvas=document.createElement('canvas');hiddenCanvas.width=w;hiddenCanvas.height=h;hiddenCanvas.getContext('2d').putImageData(hidden,0,0);return{w,h,originalCanvas:src,hiddenCanvas,regions,name:''};
+ const regions=buildRegions(mask,w,h);
+ const hiddenCanvas=document.createElement('canvas');hiddenCanvas.width=w;hiddenCanvas.height=h;hiddenCanvas.getContext('2d').putImageData(hidden,0,0);return{w,h,originalCanvas:src,hiddenCanvas,regions,mask,manual,name:''};
 }
-function render(){if(active<0||!items[active])return;const it=items[active];canvas.width=it.w;canvas.height=it.h;ctx.clearRect(0,0,it.w,it.h);ctx.drawImage(it.hiddenCanvas,0,0);for(const i of shown){const r=it.regions[i];ctx.drawImage(it.originalCanvas,r.x,r.y,r.w,r.h,r.x,r.y,r.w,r.h);}}
-function choose(i){active=i;shown.clear();ready=true;render();drawButtons();status(`${items[i].name}｜赤文字のまとまり ${items[i].regions.length}か所。範囲をタップして答えを表示。`);document.querySelectorAll('.pagebtn').forEach((b,j)=>b.classList.toggle('active',j===i));}
-function drawButtons(){const enabled=active>=0;$('hideAll').disabled=!enabled;$('showAll').disabled=!enabled;$('reset').disabled=!enabled;}
+function render(){if(active<0||!items[active])return;const it=items[active];canvas.width=it.w;canvas.height=it.h;ctx.clearRect(0,0,it.w,it.h);ctx.drawImage(it.hiddenCanvas,0,0);
+  // Manual covers are painted white first; revealed regions are redrawn afterward.
+  if(it.manual){const im=ctx.getImageData(0,0,it.w,it.h),d=im.data;for(let p=0;p<it.manual.length;p++)if(it.manual[p]){const i=p*4;d[i]=255;d[i+1]=255;d[i+2]=255;d[i+3]=255;}ctx.putImageData(im,0,0);}
+  for(const i of shown){const r=it.regions[i];ctx.drawImage(it.originalCanvas,r.x,r.y,r.w,r.h,r.x,r.y,r.w,r.h);}
+}
+function choose(i){active=i;shown.clear();manualMaskMode=false;drawing=false;ready=true;render();drawButtons();status(`${items[i].name}｜赤文字のまとまり ${items[i].regions.length}か所。タップで表示できます。`);document.querySelectorAll('.pagebtn').forEach((b,j)=>b.classList.toggle('active',j===i));$('manualMask').classList.remove('manualActive');}
+function drawButtons(){const enabled=active>=0;$('hideAll').disabled=!enabled;$('showAll').disabled=!enabled;$('manualMask').disabled=!enabled;$('reset').disabled=!enabled;}
 function updatePages(){const root=$('pages');root.innerHTML='';items.forEach((it,i)=>{const b=document.createElement('button');b.className='pagebtn'+(i===active?' active':'');b.textContent=`写真${i+1}`;b.onclick=()=>choose(i);root.appendChild(b);});}
-$('picker').addEventListener('change',async e=>{const files=Array.from(e.target.files||[]).filter(f=>f.type.startsWith('image/'));if(!files.length)return;items=[];active=-1;shown.clear();ready=false;updatePages();drawButtons();$('progress').hidden=false;$('progress').value=0;for(let i=0;i<files.length;i++){status(`写真を処理中… ${i+1}/${files.length}（全${files.length}枚）`);try{const url=URL.createObjectURL(files[i]),img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});const item=processImage(img);item.name=files[i].name||`写真${i+1}`;items.push(item);URL.revokeObjectURL(url);$('progress').value=(i+1)/files.length*100;}catch(err){console.error(err);}}$('progress').hidden=true;updatePages();if(items.length)choose(0);else status('写真を読み込めませんでした。別の写真を選んでください。');e.target.value='';});
-canvas.addEventListener('click',e=>{if(!ready||active<0)return;const it=items[active],r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*it.w/r.width,y=(e.clientY-r.top)*it.h/r.height;let best=-1,dist=Infinity;it.regions.forEach((q,i)=>{const px=Math.max(q.x,Math.min(x,q.x+q.w)),py=Math.max(q.y,Math.min(y,q.y+q.h)),d=Math.hypot(x-px,y-py);if(d<dist){dist=d;best=i;}});if(best>=0&&dist<Math.max(18,it.w*.018)){if(shown.has(best))shown.delete(best);else shown.add(best);render();status(`写真${active+1}｜表示中 ${shown.size}/${it.regions.length}か所`);}});
-$('hideAll').onclick=()=>{shown.clear();render();status('すべて隠しました。');};$('showAll').onclick=()=>{shown=new Set(items[active].regions.map((_,i)=>i));render();status('答えをすべて表示しています。');};$('reset').onclick=()=>choose(active);
-// OCR import: Tesseract.js is loaded on demand from its public CDN.
-let ocrLibPromise=null;
-function loadOCR(){if(!ocrLibPromise)ocrLibPromise=new Promise((resolve,reject)=>{if(window.Tesseract){resolve(window.Tesseract);return;}const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=()=>window.Tesseract?resolve(window.Tesseract):reject(new Error('OCRライブラリを読み込めませんでした'));s.onerror=()=>reject(new Error('OCRライブラリの読み込みに失敗しました。通信を確認してね。'));document.head.appendChild(s);});return ocrLibPromise;}
-function prepareOCRImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{try{const scale=Math.min(2.2,2200/img.naturalWidth,3200/img.naturalHeight);const w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,0,0,w,h);const im=x.getImageData(0,0,w,h),d=im.data;for(let i=0;i<d.length;i+=4){const gray=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];const contrast=Math.max(0,Math.min(255,(gray-145)*1.55+145));const cleaned=contrast<155?Math.max(0,contrast-18):Math.min(255,contrast+8);d[i]=d[i+1]=d[i+2]=cleaned;}x.putImageData(im,0,0);URL.revokeObjectURL(url);resolve(c);}catch(err){URL.revokeObjectURL(url);reject(err);}};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('画像を開けませんでした'));};img.src=url;});}
-function tidyOCRText(raw){return (raw||'').replace(/\r/g,'').replace(/[\t\u00a0]+/g,' ').split('\n').map(line=>line.replace(/[ ]{2,}/g,' ').trim()).filter((line,i,arr)=>line|| (i>0&&arr[i-1])).join('\n').replace(/\n{3,}/g,'\n\n').trim();}
-$('ocrPicker').addEventListener('change',async e=>{const files=Array.from(e.target.files||[]).filter(f=>f.type.startsWith('image/'));if(!files.length)return;const btn=$('saveCards');btn.disabled=true;$('ocrProgress').hidden=false;$('ocrProgress').value=0;let extracted=[];let worker;try{const T=await loadOCR();worker=await T.createWorker('eng+jpn',1,{logger:m=>{if(m.status==='recognizing text'){$('ocrProgress').value=Math.round((m.progress||0)*100);$('ocrStatus').textContent=`文字を読み取り中… ${Math.round((m.progress||0)*100)}%`;}}});try{await worker.setParameters({preserve_interword_spaces:'1', tessedit_pageseg_mode:'6'});}catch(_){}for(let i=0;i<files.length;i++){ $('ocrStatus').textContent=`写真 ${i+1}/${files.length} を補正して読み取り中…`;const prepared=await prepareOCRImage(files[i]);const result=await worker.recognize(prepared);const text=tidyOCRText(result.data.text);if(text)extracted.push(`【${files[i].name||`写真${i+1}`}】\n${text}`);$('ocrProgress').value=(i+1)/files.length*100;}if(!extracted.length){$('ocrStatus').textContent='文字を読み取れませんでした。写真を明るくし、文字に近づいて、なるべく正面から撮って試してね。';}else{const current=$('cardsInput').value.trim();const joined=extracted.join('\n\n──────────\n\n');$('cardsInput').value=current?current+'\n\n'+joined:joined;$('ocrStatus').textContent=`${extracted.length}枚分を読み取りました。読み取り結果は自動で「問題 | 答え」に分けられないため、誤認識を直し、各行を「問題 | 答え」に整えてから保存してね。写真の傾き・小さい文字・手書き文字は誤認識しやすいです。`;setMode('quiz');$('cardsInput').scrollIntoView({behavior:'smooth',block:'center'});}}catch(err){console.error(err);$('ocrStatus').textContent=err.message||'読み取りに失敗しました。通信を確認してね。';}finally{if(worker)try{await worker.terminate();}catch(_){}$('ocrProgress').hidden=true;btn.disabled=false;e.target.value='';}});
+$('picker').addEventListener('change',async e=>{const files=Array.from(e.target.files||[]).filter(f=>f.type.startsWith('image/'));if(!files.length)return;items=[];active=-1;shown.clear();ready=false;manualMaskMode=false;updatePages();drawButtons();$('progress').hidden=false;$('progress').value=0;for(let i=0;i<files.length;i++){status(`写真を処理中… ${i+1}/${files.length}（全${files.length}枚）`);try{const url=URL.createObjectURL(files[i]),img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});const item=processImage(img);item.name=files[i].name||`写真${i+1}`;items.push(item);URL.revokeObjectURL(url);$('progress').value=(i+1)/files.length*100;}catch(err){console.error(err);}}$('progress').hidden=true;updatePages();if(items.length)choose(0);else status('写真を読み込めませんでした。');e.target.value='';});
+function point(e){const r=canvas.getBoundingClientRect(),it=items[active];return{x:Math.max(0,Math.min(it.w-1,Math.floor((e.clientX-r.left)*it.w/r.width))),y:Math.max(0,Math.min(it.h-1,Math.floor((e.clientY-r.top)*it.h/r.height)))};}
+function toggleAt(x,y){const it=items[active],w=it.w,h=it.h;let best=-1,dist=Infinity;it.regions.forEach((q,i)=>{const px=Math.max(q.x,Math.min(x,q.x+q.w)),py=Math.max(q.y,Math.min(y,q.y+q.h)),d=Math.hypot(x-px,y-py);if(d<dist){dist=d;best=i;}});if(best<0||dist>Math.max(18,it.w*.02))return false;if(shown.has(best))shown.delete(best);else shown.add(best);return true;}
+function brush(it,x,y){const r=Math.max(8,Math.round(it.w/90));for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){if(dx*dx+dy*dy>r*r)continue;const xx=x+dx,yy=y+dy;if(xx>=0&&xx<it.w&&yy>=0&&yy<it.h){const p=yy*it.w+xx;it.mask[p]=1;it.manual[p]=1;}}
+  // Draw the stroke directly for smooth iPhone interaction. Region rebuilding is deferred until the stroke ends.
+  ctx.save();ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+canvas.addEventListener('pointerdown',e=>{if(!ready||active<0)return;const it=items[active],p=point(e);if(manualMaskMode){drawing=true;canvas.setPointerCapture(e.pointerId);brush(it,p.x,p.y);e.preventDefault();}else{if(toggleAt(p.x,p.y))render();}});
+canvas.addEventListener('pointermove',e=>{if(!drawing||!manualMaskMode)return;const it=items[active],p=point(e);brush(it,p.x,p.y);e.preventDefault();});
+canvas.addEventListener('pointerup',()=>{if(drawing&&active>=0){const it=items[active];it.regions=buildRegions(it.mask,it.w,it.h);render();}drawing=false});
+canvas.addEventListener('pointercancel',()=>{if(drawing&&active>=0){const it=items[active];it.regions=buildRegions(it.mask,it.w,it.h);render();}drawing=false});
+$('manualMask').onclick=()=>{manualMaskMode=!manualMaskMode;$('manualMask').classList.toggle('manualActive',manualMaskMode);$('manualMask').textContent=manualMaskMode?'✓ 手動で隠す中':'✍️ 手動で隠す';status(manualMaskMode?'指でなぞった部分を隠します。終わったらもう一度ボタンを押して通常モードに戻ります。':'通常モード：隠した範囲をタップして答えを表示します。');};
+$('hideAll').onclick=()=>{shown.clear();render();status('すべて隠しました。');};$('showAll').onclick=()=>{shown=new Set(items[active].regions.map((_,i)=>i));render();status('答えをすべて表示しています。');};$('reset').onclick=()=>{exitStudyFullscreen();items=[];active=-1;shown.clear();ready=false;manualMaskMode=false;updatePages();drawButtons();$('manualMask').classList.remove('manualActive');$('manualMask').textContent='✍️ 手動で隠す';ctx.clearRect(0,0,canvas.width,canvas.height);status('写真を選ぶと始められます。');};
+
 const samples=[['break the ice','緊張をほぐす、場を和ませる'],['once in a blue moon','めったに〜ない'],['under the weather','体調が悪い'],['明治維新が始まった年','1868年'],['産業革命が最初に本格化した国','イギリス'],['フランス革命が始まった年','1789年']];
-function parseCards(text){return text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>{const p=line.split('|');if(p.length<2)return null;const q=p.shift().trim(),a=p.join('|').trim();return q&&a?{q,a}:null;}).filter(Boolean);}
-function shuffled(n){const a=Array.from({length:n},(_,i)=>i);for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function startQuiz(){cards=parseCards($('cardsInput').value);if(!cards.length){$('quizStatus').textContent='「問題 | 答え」の形式で入力してね。';return;}try{localStorage.setItem('redsheetCards',JSON.stringify(cards));}catch(e){}knownSet.clear();reviewSet.clear();reviewOnlyMode=false;order=shuffled(cards.length);pos=0;renderQuiz();}
-function renderQuiz(){const enabled=cards.length>0,hasOrder=enabled&&order.length>0;$('reveal').disabled=!hasOrder;$('nextQ').disabled=!hasOrder;$('reshuffle').disabled=!enabled;$('reviewOnly').disabled=!enabled||reviewSet.size===0;$('allQuestions').disabled=!enabled||!reviewOnlyMode;$('known').disabled=!hasOrder;$('review').disabled=!hasOrder;$('quizCount').textContent=hasOrder?`${Math.min(pos+1,order.length)}/${order.length}問${reviewOnlyMode?'（復習）':''}`:'0問';if(!enabled){$('qtext').textContent='問題を登録してね';$('atext').classList.add('hidden');$('quizStatus').textContent='';return;}if(!hasOrder){$('qtext').textContent='復習対象の問題がありません';$('atext').textContent='「もう一度」を押した問題がここに出ます。';$('atext').classList.remove('hidden');$('quizStatus').textContent=`覚えた ${knownSet.size}｜復習 ${reviewSet.size}`;return;}const c=cards[order[pos]];$('qtext').textContent=c.q;$('atext').textContent=c.a;$('atext').classList.toggle('hidden',!answerShown);$('quizStatus').textContent=`覚えた ${knownSet.size}｜復習 ${reviewSet.size}`;$('nextQ').textContent=pos===order.length-1?'最初から ↻':'次の問題 →';}
-$('sample').onclick=()=>{$('cardsInput').value=samples.map(x=>x.join(' | ')).join('\n');};$('saveCards').onclick=startQuiz;$('clearCards').onclick=()=>{$('cardsInput').value='';cards=[];order=[];pos=0;reviewOnlyMode=false;try{localStorage.removeItem('redsheetCards');}catch(e){}renderQuiz();};$('reveal').onclick=()=>{answerShown=true;renderQuiz();};$('nextQ').onclick=()=>{if(!order.length)return;pos=(pos+1)%order.length;answerShown=false;renderQuiz();};$('reshuffle').onclick=()=>{reviewOnlyMode=false;order=shuffled(cards.length);pos=0;answerShown=false;renderQuiz();};$('reviewOnly').onclick=()=>{if(!reviewSet.size)return;reviewOnlyMode=true;order=shuffled([...reviewSet]);pos=0;answerShown=false;renderQuiz();};$('allQuestions').onclick=()=>{reviewOnlyMode=false;order=shuffled(cards.length);pos=0;answerShown=false;renderQuiz();};$('known').onclick=()=>{if(!order.length)return;knownSet.add(order[pos]);reviewSet.delete(order[pos]);pos=(pos+1)%order.length;answerShown=false;renderQuiz();};$('review').onclick=()=>{if(!order.length)return;reviewSet.add(order[pos]);knownSet.delete(order[pos]);pos=(pos+1)%order.length;answerShown=false;renderQuiz();};
-try{const saved=JSON.parse(localStorage.getItem('redsheetCards')||'[]');if(Array.isArray(saved)&&saved.length){$('cardsInput').value=saved.map(c=>`${c.q} | ${c.a}`).join('\n');}}catch(e){}
+function parseCards(text){
+  const seen=new Set(),out=[];
+  for(const line0 of (text||'').split(/\r?\n/)){
+    const line=line0.trim();if(!line)continue;const p=line.split('|');if(p.length<2)continue;const q=p.shift().trim(),a=p.join('|').trim();if(!q||!a)continue;const key=q+'\u241E'+a;if(seen.has(key))continue;seen.add(key);out.push({q,a,id:makeId(q,a)});
+  }return out;
+}
+function makeId(q,a){let h=2166136261;const s=q+'\u241E'+a;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return 'c'+(h>>>0).toString(36);}
+function shuffled(a){const b=Array.isArray(a)?a.slice():Array.from({length:a},(_,i)=>i);for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function persistQuiz(){try{localStorage.setItem('redsheetCards',JSON.stringify(cards));localStorage.setItem('redsheetQuizState',JSON.stringify({known:[...knownIds],review:[...reviewIds]}));}catch(e){}updateStats();}
+function restoreQuizState(){knownIds=new Set();reviewIds=new Set();try{const s=JSON.parse(localStorage.getItem('redsheetQuizState')||'null');if(s){knownIds=new Set(Array.isArray(s.known)?s.known:[]);reviewIds=new Set(Array.isArray(s.review)?s.review:[]);}}catch(e){}updateStats();}
+function updateStats(){const total=cards.length;let k=0,r=0;for(const c of cards){if(knownIds.has(c.id))k++;if(reviewIds.has(c.id))r++;}$('statTotal').textContent=total;$('statKnown').textContent=k;$('statReview').textContent=r;}
+function startQuiz(){
+  const next=parseCards($('cardsInput').value);if(!next.length){$('quizStatus').textContent='「問題 | 答え」の形式で1問以上入力してね。';return;}
+  const prevKnown=new Set(knownIds),prevReview=new Set(reviewIds);cards=next;knownIds=new Set(cards.map(c=>c.id).filter(id=>prevKnown.has(id)));reviewIds=new Set(cards.map(c=>c.id).filter(id=>prevReview.has(id)));reviewOnlyMode=false;order=shuffled(cards.map(c=>c.id));pos=0;answerShown=false;persistQuiz();renderQuiz();
+}
+function currentCard(){const id=order[pos];return cards.find(c=>c.id===id)||null;}
+function advanceAfterMark(removedFromReview=false){if(reviewOnlyMode&&removedFromReview){const current=order[pos];order=order.filter(id=>id!==current);if(pos>=order.length)pos=0;}else if(order.length){pos=(pos+1)%order.length;}}
+function renderQuiz(){
+  const enabled=cards.length>0,hasOrder=enabled&&order.length>0;
+  $('reveal').disabled=!hasOrder;$('nextQ').disabled=!hasOrder;$('reshuffle').disabled=!enabled;$('reviewOnly').disabled=!enabled||reviewIds.size===0;$('allQuestions').disabled=!enabled||!reviewOnlyMode;$('known').disabled=!hasOrder;$('review').disabled=!hasOrder;
+  $('quizCount').textContent=hasOrder?`${Math.min(pos+1,order.length)}/${order.length}問${reviewOnlyMode?'（復習）':''}`:'0問';
+  updateStats();
+  if(!enabled){$('qtext').textContent='問題を登録してね';$('atext').classList.add('hidden');$('tapHint').classList.add('hidden');$('quizStatus').textContent='';return;}
+  if(!hasOrder){$('qtext').textContent=reviewOnlyMode?'復習完了！ 🎉':'問題を登録してね';$('atext').textContent=reviewOnlyMode?'「全問題に戻る」で通常出題に戻れます。':'保存した問題がここに出ます。';$('atext').classList.remove('hidden');$('tapHint').classList.add('hidden');$('quizStatus').textContent=`覚えた ${knownIds.size}｜復習 ${reviewIds.size}`;return;}
+  const c=currentCard();if(!c)return;
+  $('qtext').textContent=c.q;$('atext').textContent=c.a;$('atext').classList.toggle('hidden',!answerShown);$('tapHint').classList.remove('hidden');$('quizStatus').textContent=`覚えた ${knownIds.size}｜復習 ${reviewIds.size}`;$('nextQ').textContent=pos===order.length-1?'最初から ↻':'次の問題 →';
+}
+$('sample').onclick=()=>{$('cardsInput').value=samples.map(x=>x.join(' | ')).join('\n');saveDraft();};
+$('saveCards').onclick=startQuiz;
+$('clearCards').onclick=()=>{$('cardsInput').value='';cards=[];order=[];pos=0;answerShown=false;knownIds.clear();reviewIds.clear();reviewOnlyMode=false;try{localStorage.removeItem('redsheetCards');localStorage.removeItem('redsheetQuizState');localStorage.removeItem('redsheetDraft');}catch(e){}$('draftSaved').textContent='入力内容を消去しました。';renderQuiz();};
+$('resetProgress').onclick=()=>{knownIds.clear();reviewIds.clear();reviewOnlyMode=false;order=shuffled(cards.map(c=>c.id));pos=0;answerShown=false;persistQuiz();renderQuiz();$('quizStatus').textContent='学習状況をリセットしました。';};
+$('reveal').onclick=()=>{answerShown=true;renderQuiz();};$('quizBox').onclick=()=>{if(order.length){answerShown=!answerShown;renderQuiz();}};
+$('nextQ').onclick=()=>{if(!order.length)return;pos=(pos+1)%order.length;answerShown=false;renderQuiz();};
+$('reshuffle').onclick=()=>{reviewOnlyMode=false;order=shuffled(cards.map(c=>c.id));pos=0;answerShown=false;renderQuiz();};
+$('reviewOnly').onclick=()=>{if(!reviewIds.size)return;reviewOnlyMode=true;order=shuffled([...reviewIds]);pos=0;answerShown=false;renderQuiz();};
+$('allQuestions').onclick=()=>{reviewOnlyMode=false;order=shuffled(cards.map(c=>c.id));pos=0;answerShown=false;renderQuiz();};
+$('known').onclick=()=>{const c=currentCard();if(!c)return;knownIds.add(c.id);reviewIds.delete(c.id);advanceAfterMark(reviewOnlyMode);answerShown=false;persistQuiz();renderQuiz();};
+$('review').onclick=()=>{const c=currentCard();if(!c)return;reviewIds.add(c.id);knownIds.delete(c.id);advanceAfterMark(false);answerShown=false;persistQuiz();renderQuiz();};
+let draftTimer=null;function saveDraft(){clearTimeout(draftTimer);draftTimer=setTimeout(()=>{try{localStorage.setItem('redsheetDraft',$('cardsInput').value);$('draftSaved').textContent=`入力内容を保存済み · ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`;}catch(e){}},250);}
+$('cardsInput').addEventListener('input',saveDraft);
+$('exportCards').onclick=()=>{const payload={version:2,exportedAt:new Date().toISOString(),cards,known:[...knownIds],review:[...reviewIds]};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='redsheet-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('importCards').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const data=JSON.parse(await f.text());const imported=Array.isArray(data.cards)?data.cards.map(c=>({q:String(c.q||'').trim(),a:String(c.a||'').trim()})).filter(c=>c.q&&c.a):[];if(!imported.length)throw new Error('有効なカードがありません');cards=imported.map(c=>({...c,id:makeId(c.q,c.a)}));knownIds=new Set((data.known||[]).filter(x=>cards.some(c=>c.id===x)));reviewIds=new Set((data.review||[]).filter(x=>cards.some(c=>c.id===x)));$('cardsInput').value=cards.map(c=>`${c.q} | ${c.a}`).join('\n');saveDraft();persistQuiz();order=shuffled(cards.map(c=>c.id));pos=0;answerShown=false;reviewOnlyMode=false;renderQuiz();$('quizStatus').textContent=`${cards.length}問を読み込みました。`;}catch(err){$('quizStatus').textContent='バックアップを読み込めませんでした。';}finally{e.target.value='';}});
+try{const saved=JSON.parse(localStorage.getItem('redsheetCards')||'[]');if(Array.isArray(saved)&&saved.length){cards=saved.map(c=>({q:String(c.q||'').trim(),a:String(c.a||'').trim(),id:makeId(c.q||'',c.a||'')})).filter(c=>c.q&&c.a);$('cardsInput').value=cards.map(c=>`${c.q} | ${c.a}`).join('\n');}else{const draft=localStorage.getItem('redsheetDraft');if(draft)$('cardsInput').value=draft;} }catch(e){}
+restoreQuizState();
+if(cards.length){const valid=new Set(cards.map(c=>c.id));knownIds=new Set([...knownIds].filter(id=>valid.has(id)));reviewIds=new Set([...reviewIds].filter(id=>valid.has(id)));order=shuffled(cards.map(c=>c.id));persistQuiz();}renderQuiz();
+
+// OCR: Tesseract.jsを端末内で実行。初回準備後はブラウザが保持した資産を利用してオフラインOCRを狙う。
+let ocrLibPromise=null;
+let ocrPrepared=false;
+try{ocrPrepared=localStorage.getItem('redsheetOCRPrepared')==='1';}catch(_){}
+function loadOCR(){
+  if(!ocrLibPromise)ocrLibPromise=new Promise((resolve,reject)=>{
+    if(window.Tesseract){resolve(window.Tesseract);return;}
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=()=>window.Tesseract?resolve(window.Tesseract):reject(new Error('OCRライブラリを読み込めませんでした'));
+    s.onerror=()=>reject(new Error('OCRライブラリの読み込みに失敗しました。初回準備はWi-Fiで行ってください。'));
+    document.head.appendChild(s);
+  });
+  return ocrLibPromise;
+}
+async function makeOCRWorker(logger){
+  const T=await loadOCR();
+  return await T.createWorker('jpn+eng',1,{logger:logger||(()=>{})});
+}
+function setOCRStatus(t){$('ocrStatus').textContent=t;}
+if(ocrPrepared)setOCRStatus('OCR準備済み。外では機内モードで動作確認できます。');
+
+$('prepareOCR').addEventListener('click',async()=>{
+  const b=$('prepareOCR');b.disabled=true;$('ocrProgress').hidden=false;$('ocrProgress').value=0;
+  setOCRStatus('Wi-FiでOCRエンジン・日本語・英語データを準備中…');
+  let w;
+  try{if('serviceWorker' in navigator && location.protocol.startsWith('http')){try{await navigator.serviceWorker.ready;}catch(_){}}
+    w=await makeOCRWorker(m=>{
+      if(m.status==='loading tesseract core')setOCRStatus('OCRエンジンを読み込み中…');
+      else if(m.status==='initializing tesseract')setOCRStatus('OCRエンジンを初期化中…');
+      else if(m.status==='loading language traineddata')setOCRStatus('日本語・英語の認識データを読み込み中…');
+      else if(m.status==='initializing api')setOCRStatus('OCRの準備を仕上げています…');
+    });
+    try{await w.setParameters({preserve_interword_spaces:'1',user_defined_dpi:'300',tessedit_ocr_engine_mode:'1'});}catch(_){}
+    // A tiny recognition warms the OCR pipeline so the first real scan is not used as the cache check.
+    const warm=document.createElement('canvas');warm.width=32;warm.height=32;
+    const wx=warm.getContext('2d');wx.fillStyle='#fff';wx.fillRect(0,0,32,32);wx.fillStyle='#111';wx.font='16px sans-serif';wx.fillText('A',8,20);
+    try{await w.recognize(warm);}catch(_){}
+    ocrPrepared=true;try{localStorage.setItem('redsheetOCRPrepared','1');}catch(_){}
+    setOCRStatus('OCRの準備が完了しました。Wi-Fiを切って、機内モードで一度テストしてください。');
+  }catch(e){console.error(e);ocrPrepared=false;try{localStorage.removeItem('redsheetOCRPrepared');}catch(_){}setOCRStatus(e.message||'OCRの準備に失敗しました。Wi-Fi接続を確認してください。');}
+  finally{if(w)try{await w.terminate();}catch(_){}$('ocrProgress').hidden=true;b.disabled=false;}
+});
+
+function loadImageCanvas(file,maxW=3200,maxH=4300){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{
+      try{
+        const scale=Math.min(1,maxW/img.naturalWidth,maxH/img.naturalHeight);
+        const w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,0,0,w,h);
+        URL.revokeObjectURL(url);resolve(c);
+      }catch(err){URL.revokeObjectURL(url);reject(err);}
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('画像を開けませんでした'));};
+    img.src=url;
+  });
+}
+function cropCanvas(src,x0,y0,x1,y1){
+  const w=Math.max(1,Math.round(x1-x0)),h=Math.max(1,Math.round(y1-y0));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  c.getContext('2d').drawImage(src,x0,y0,w,h,0,0,w,h);return c;
+}
+function makeGrayCanvas(src,mode='gray'){
+  const w=src.width,h=src.height,c=document.createElement('canvas');c.width=w;c.height=h;
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(src,0,0);const im=x.getImageData(0,0,w,h),d=im.data;
+  for(let i=0;i<d.length;i+=4){
+    let g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+    if(mode==='contrast')g=Math.max(0,Math.min(255,(g-128)*1.28+128));
+    else if(mode==='binary')g=g<170?25:245;
+    d[i]=d[i+1]=d[i+2]=g;
+  }
+  x.putImageData(im,0,0);return c;
+}
+function findColumnGap(src){
+  const w=src.width,h=src.height,x=src.getContext('2d',{willReadFrequently:true}),im=x.getImageData(0,0,w,h),d=im.data;
+  const start=Math.floor(w*0.26),end=Math.ceil(w*0.74),sampleStep=Math.max(1,Math.floor(h/420));
+  const counts=new Float32Array(end-start);let overall=0,n=0;
+  for(let y=0;y<h;y+=sampleStep){for(let xx=0;xx<w;xx+=Math.max(1,Math.floor(w/500))){const p=(y*w+xx)*4,g=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];if(g<185)overall++;n++;}}
+  if(!n||overall/n<0.01)return null;
+  for(let x0=start;x0<end;x0++){
+    let c=0,count=0;for(let y=0;y<h;y+=sampleStep){const p=(y*w+x0)*4,g=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];if(g<185)c++;count++;}
+    counts[x0-start]=c/count;
+  }
+  // Smooth so a narrow letter/vertical rule does not become the split.
+  const smooth=[];for(let i=0;i<counts.length;i++){let s=0,c=0;for(let j=Math.max(0,i-10);j<=Math.min(counts.length-1,i+10);j++){s+=counts[j];c++;}smooth[i]=s/c;}
+  let best=-1,bv=Infinity;for(let i=0;i<smooth.length;i++){if(smooth[i]<bv){bv=smooth[i];best=i;}}
+  if(best<0)return null;
+  const split=start+best;
+  const left=start,right=end;
+  const leftInk=smooth.slice(0,best).filter(v=>v>0.02).length, rightInk=smooth.slice(best+1).filter(v=>v>0.02).length;
+  if(split<w*0.34||split>w*0.66||bv>0.055||leftInk<12||rightInk<12)return null;
+  return split;
+}
+function tidyOCRText(raw){
+  return (raw||'').replace(/\r/g,'').replace(/[\u0000\u000b\f]/g,'').replace(/[\t\u00a0]+/g,' ')
+    .split('\n').map(line=>line.replace(/[ ]{2,}/g,' ').trim())
+    .filter((line,i,arr)=>line||(i>0&&arr[i-1]))
+    .join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function resultScore(result,text){
+  const c=Number(result?.data?.confidence);return (Number.isFinite(c)?c:0)+Math.min(25,(text||'').length/90);
+}
+async function recognizeWithSettings(worker,canvas,psm){
+  try{await worker.setParameters({preserve_interword_spaces:'1',user_defined_dpi:'300',tessedit_pageseg_mode:String(psm)});}catch(_){}
+  return await worker.recognize(canvas);
+}
+async function recognizeBest(worker,source){
+  // Compare variants one at a time to keep iPhone memory usage down.
+  let best=null,bestText='',bestScore=-1;
+  for(const mode of ['gray','contrast']){
+    const v=makeGrayCanvas(source,mode);
+    const r=await recognizeWithSettings(worker,v,4);const t=tidyOCRText(r.data?.text||'');const sc=resultScore(r,t);
+    if(sc>bestScore){best=r;bestText=t;bestScore=sc;}
+  }
+  // PSM 6/3 are useful fallbacks for pages that do not separate cleanly.
+  if(bestScore<60){
+    const v=makeGrayCanvas(source,'gray');
+    for(const psm of [6,3]){const r=await recognizeWithSettings(worker,v,psm);const t=tidyOCRText(r.data?.text||'');const sc=resultScore(r,t);if(sc>bestScore){best=r;bestText=t;bestScore=sc;}}
+  }
+  return {result:best,text:bestText,score:bestScore};
+}
+async function highAccuracyOCR(file,worker){
+  const full=await loadImageCanvas(file,2400,3400);
+  const split=findColumnGap(full);
+  const parts=[];
+  if(split){
+    const gapPad=Math.max(10,Math.round(full.width*0.012));
+    parts.push({canvas:cropCanvas(full,0,0,Math.min(full.width,split+gapPad),full.height),label:'左段'});
+    parts.push({canvas:cropCanvas(full,Math.max(0,split-gapPad),0,full.width,full.height),label:'右段'});
+  }else{
+    parts.push({canvas:full,label:'本文'});
+  }
+  const outputs=[];
+  for(let i=0;i<parts.length;i++){
+    const o=await recognizeBest(worker,parts[i].canvas);
+    if(o.text)outputs.push(o.text);
+  }
+  return outputs.join('\n\n');
+}
+$('ocrPicker').addEventListener('change',async e=>{
+  const files=Array.from(e.target.files||[]).filter(f=>f.type.startsWith('image/'));if(!files.length)return;
+  const btn=$('saveCards');btn.disabled=true;$('ocrProgress').hidden=false;$('ocrProgress').value=0;
+  let extracted=[],worker;
+  try{
+    worker=await makeOCRWorker(m=>{if(m.status==='recognizing text'){const pct=Math.round((m.progress||0)*100);$('ocrStatus').textContent=`高精度OCR中… ${pct}%`;}});
+    for(let i=0;i<files.length;i++){
+      setOCRStatus(`写真 ${i+1}/${files.length} を高精度OCR中…（2段組み自動判定・前処理を比較）`);
+      const text=await highAccuracyOCR(files[i],worker);if(text)extracted.push(`【${files[i].name||`写真${i+1}`}】\n${text}`);
+      $('ocrProgress').value=(i+1)/files.length*100;
+    }
+    if(!extracted.length)setOCRStatus('文字を読み取れませんでした。写真を明るく、正面から撮って試してください。');
+    else{
+      const current=$('cardsInput').value.trim(),joined=extracted.join('\n\n──────────\n\n');$('cardsInput').value=current?current+'\n\n'+joined:joined;
+      setOCRStatus(`${extracted.length}枚分を高精度OCRしました。認識結果を確認・修正してから保存してください。`);
+      $('quizTab').click();$('cardsInput').scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  }catch(err){console.error(err);setOCRStatus(err.message||'読み取りに失敗しました。準備後もWi-Fiなしで動くか確認してください。');}
+  finally{if(worker)try{await worker.terminate();}catch(_){}$('ocrProgress').hidden=true;btn.disabled=false;e.target.value='';}
+});
+// Install the app shell for offline reopening. The service worker also caches OCR-related CDN resources after they are used once.
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+function refreshNetBadge(){const b=$('netBadge');if(!b)return;b.textContent=navigator.onLine?'オンライン':'オフライン';b.classList.toggle('off',!navigator.onLine);}window.addEventListener('online',refreshNetBadge);window.addEventListener('offline',refreshNetBadge);refreshNetBadge();
 </script></body></html>
